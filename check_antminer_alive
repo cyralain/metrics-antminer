@@ -1,0 +1,21 @@
+#!/bin/bash
+while getopts H:p: option
+do
+ case "${option}"
+ in
+H) addr=${OPTARG};;
+p) port=${OPTARG};;
+ esac
+done
+ 
+/bin/nc -vz "$addr" "$port" > /dev/null 2>&1
+ 
+stat=`echo $?`
+ 
+if test $stat -eq 0; then
+echo "Port $port is opened on $addr"
+exit 0
+else
+echo "Port $port is not opened on $addr"
+exit 2
+fi

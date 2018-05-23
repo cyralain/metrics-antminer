@@ -1,0 +1,45 @@
+#!/bin/bash
+while getopts H:w:c: option
+do
+ case "${option}"
+ in
+H) HOSTNAME=${OPTARG};;
+w) WARN=${OPTARG};;
+c) CRIT=${OPTARG};;
+ esac
+done
+
+if (( $WARN <= $CRIT )); then
+echo "Warning must be higher than Critical treshold" + "warn: " + $WARN + "critical: " + $CRIT
+exit
+fi
+
+apistats=`echo -n "stats" | nc $HOSTNAME 4028`
+
+HASHRATEAVG=`echo $apistats | sed -e 's/,/\n/g'| grep "GHS av=" | cut -d "=" -f2 | awk '{print ($0-int($0)<0.499)?int($0):int($0)+1}'`
+
+# awk '{print ($0-int($0)<0.499)?int($0):int($0)+1}' => to round 
+
+
+if [ -z $HASHRATEAVG ]; then
+        status="API CONNECTION ERROR"
+        exitstatus=1
+
+        output="$status - Can't collect data from the miner | HASHRATEAVG=$HASHRATEAVG"
+
+        echo "$output"
+        exit $exitstatus
+
+elif (( $HASHRATEAVG <= "$WARN" )) && (( $HASHRATEAVG >= "$CRIT" )); then
+        echo "HASHRATE AVG WARNING: " $HASHRATEAVG
+        exitstatus=1
+elif (( $HASHRATEAVG < "$CRIT" )); then
+        echo "HASHRATE AVG CRITICAL: " $HASHRATEAVG
+        exitstatus=2
+else
+        echo "HASHRATE OK: " $HASHRATEAVG
+        exitstatus=0
+fi
+
+exit $exitstatus
+
